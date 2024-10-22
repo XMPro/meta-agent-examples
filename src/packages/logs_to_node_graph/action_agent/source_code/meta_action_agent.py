@@ -33,7 +33,7 @@ def on_create(data: dict) -> dict | None:
 def on_receive(data: dict) -> dict | None:
 
     result = update_node_graph('/app/logs')
-    
+    print(result)
     return result
 
 
