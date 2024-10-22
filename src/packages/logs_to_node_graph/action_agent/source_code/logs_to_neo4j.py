@@ -103,10 +103,10 @@ def _read_events(log_file_path):
                 key = str(agent.get('Id'))
 
                 events[key]['count'] += 1
-                timestamp = parse_timestamp(log_entry['Timestamp'])
+                # timestamp = parse_timestamp(log_entry['Timestamp'])
 
-                if events[key]['last_updated'] is None or timestamp > events[key]['last_updated']:
-                    events[key]['last_updated'] = timestamp
+                # if events[key]['last_updated'] is None or timestamp > events[key]['last_updated']:
+                #     events[key]['last_updated'] = timestamp
 
                 events[key]['data_stream_id'] = stream.get('Id')
                 events[key]['data_stream_name'] = stream.get('Name')
