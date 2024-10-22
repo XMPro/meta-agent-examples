@@ -3,30 +3,23 @@ from datetime import datetime
 from collections import defaultdict
 import os
 import glob
+from neo4j import GraphDatabase
 
+# TODO clean this up
+# Neo4j settings
+neo4j_uri = os.getenv("NEO4J_URI", "bolt://neo4j:7687")
+neo4j_user = os.getenv("NEO4J_USER", "neo4j")
+neo4j_password = os.getenv("NEO4J_PASSWORD", "Pass@word")
 
-def foo():
-    return "bar"
+# Initialize Neo4j driver
+driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
 
 
 def update_node_graph(log_directory):
     latest_log_file = _get_latest_log_file(log_directory)
     events = _read_events(latest_log_file)
-    # _update_neo4j_node_graph(events)
+    _update_neo4j_node_graph(events)
 
-    # Print results
-    # for key, event in event_counts.items():
-    #     print(f"\nStream Object: {key}")
-    #     print(f"  Count: {event['count']}")
-    #     print(f"  Last Updated: {event['last_updated']}")
-    #     print(f"  Data Stream ID: {event['data_stream_id']}")
-    #     print(f"  Data Stream Name: {event['data_stream_name']}")
-    #     print(f"  Stream Object ID: {event['stream_object_id']}")
-    #     print(f"  Stream Object Name: {event['stream_object_name']}")
-    #     print(f"  Stream Object Type: {event['stream_object_type']}")
-    #     print(f"  SH ID: {event['sh_id']}")
-    #     print(f"  SH Name: {event['sh_name']}")
-    #     print(f"  SH Collection ID: {event['sh_collection_id']}")
 
     return events
 
@@ -44,42 +37,10 @@ def _get_latest_log_file(log_directory, pattern="sh-log-*.json"):
     latest_file = max(log_files, key=os.path.getctime)
     return latest_file
 
-
-def parse_timestamp(timestamp_str):
-    """
-    Parse timestamp string to datetime object, handling various ISO format variations.
-    """
-    try:
-        # Try parsing with microseconds
-        return datetime.fromisoformat(timestamp_str)
-    except ValueError:
-        try:
-            # If that fails, try stripping any subsecond precision beyond 6 digits
-            # Split on decimal point
-            main_part, subseconds = timestamp_str.rsplit('.', 1)
-            timezone_split = subseconds.rsplit('+', 1)
-            
-            if len(timezone_split) > 1:
-                subseconds, timezone = timezone_split
-                # Truncate subseconds to 6 digits if longer
-                subseconds = subseconds[:6]
-                new_timestamp = f"{main_part}.{subseconds}+{timezone}"
-            else:
-                # Handle case where there's no explicit timezone
-                subseconds = subseconds[:6]
-                new_timestamp = f"{main_part}.{subseconds}"
-                
-            return datetime.fromisoformat(new_timestamp)
-        except Exception as e:
-            print(f"Error parsing timestamp '{timestamp_str}': {e}")
-            # Return current time as fallback
-            return datetime.now()
-
-
 def _read_events(log_file_path):
     events = defaultdict(lambda: {
         'count': 0,
-        'last_updated': None,
+        'timestamp': None,
         'data_stream_id': None,
         'data_stream_name': None,
         'stream_object_id': None,
@@ -103,11 +64,7 @@ def _read_events(log_file_path):
                 key = str(agent.get('Id'))
 
                 events[key]['count'] += 1
-                # timestamp = parse_timestamp(log_entry['Timestamp'])
-
-                # if events[key]['last_updated'] is None or timestamp > events[key]['last_updated']:
-                #     events[key]['last_updated'] = timestamp
-
+                events[key]['timestamp'] = log_entry['Timestamp']
                 events[key]['data_stream_id'] = stream.get('Id')
                 events[key]['data_stream_name'] = stream.get('Name')
                 events[key]['stream_object_id'] = agent.get('Id')
@@ -123,3 +80,33 @@ def _read_events(log_file_path):
                 print(f"KeyError: {e} in line: {line}")
 
     return dict(events)
+
+
+def _update_neo4j_node_graph(events: dict):
+    
+    for key, event in events.items():
+        
+        if(event['stream_object_id'] is None):
+            continue
+        
+        with driver.session() as session:
+            session.write_transaction(_merge_stream_object, event)
+
+
+def _merge_stream_object(tx, event):
+    query = """
+    MERGE (so:StreamObject {id: $so_id})
+    SET so.title = $so_title,
+        so.type = $so_type,
+        so.event_count = $so_event_count,
+        so.last_updated = $last_updated
+    """
+
+    tx.run(query, {
+        "so_id": event['stream_object_id'],
+        "so_title": event['stream_object_name'],
+        "so_type": event['stream_object_type'],
+        "so_event_count": event['count'],
+        "log_created": event['timestamp'],
+        "last_updated": datetime.now().isoformat()
+    })

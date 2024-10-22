@@ -17,14 +17,6 @@ ds_server_url = None
 events_processed_count = 0
 stream_object_event_count = 0
 
-# Neo4j settings
-neo4j_uri = os.getenv("NEO4J_URI", "bolt://neo4j:7687")
-neo4j_user = os.getenv("NEO4J_USER", "neo4j")
-neo4j_password = os.getenv("NEO4J_PASSWORD", "Pass@word")
-
-# Initialize Neo4j driver
-driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
-
 
 def on_create(data: dict) -> dict | None:
     return {}
@@ -33,55 +25,13 @@ def on_create(data: dict) -> dict | None:
 def on_receive(data: dict) -> dict | None:
 
     result = update_node_graph('/app/logs')
-    print(result)
+    # print(result)
     return result
 
 
 def on_destroy() -> dict | None:
     return {}
 
-
-
-# def _update_neo4j_node_graph(events: dict):
-#     for key, event in events.items():
-        
-#         if(event['stream_object_id'] is None):
-#             continue
-        
-#         with driver.session() as session:
-#             session.write_transaction(_merge_stream_object, event)
-            
-            
-#             # print(f"\nStream Object: {key}")
-#         #     print(f"  Count: {event['count']}")
-#         #     print(f"  Last Updated: {event['last_updated']}")
-#         #     print(f"  Data Stream ID: {event['data_stream_id']}")
-#         #     print(f"  Data Stream Name: {event['data_stream_name']}")
-#         #     print(f"  Stream Object ID: {event['stream_object_id']}")
-#         #     print(f"  Stream Object Name: {event['stream_object_name']}")
-#         #     print(f"  Stream Object Type: {event['stream_object_type']}")
-#         #     print(f"  SH ID: {event['sh_id']}")
-#         #     print(f"  SH Name: {event['sh_name']}")
-#         #     print(f"  SH Collection ID: {event['sh_collection_id']}")
-        
-
-
-# def _merge_stream_object(tx, event):
-#     query = """
-#     MERGE (so:StreamObject {id: $so_id})
-#     SET so.title = $so_title,
-#         so.type = $so_type,
-#         so.event_count = $so_event_count,
-#         so.last_updated = $last_updated
-#     """
-
-#     tx.run(query, {
-#         "so_id": event['stream_object_id'],
-#         "so_title": event['stream_object_name'],
-#         "so_type": event['stream_object_type'],
-#         "so_event_count": event['count'],
-#         "last_updated": datetime.now().isoformat()
-#     })
 
 
 # def _merge_stream_object_edge(tx):
