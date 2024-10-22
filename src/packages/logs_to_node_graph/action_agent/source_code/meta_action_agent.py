@@ -1,5 +1,5 @@
 # TODO include example of this
-import src.packages.logs_to_node_graph.action_agent.source_code as logs_to_node_graph 
+from src.packages.logs_to_node_graph.action_agent.source_code import foo
 import os
 import json
 from datetime import datetime
@@ -32,11 +32,11 @@ def on_create(data: dict) -> dict | None:
 
 def on_receive(data: dict) -> dict | None:
     print("foo")
-    result = logs_to_node_graph.foo()
+    result = foo()
     print(result)
     # print("Current directory:", os.getcwd())
     # result = update_node_graph('/app/logs')
-    # return result
+    return result
 
 
 def on_destroy() -> dict | None:
