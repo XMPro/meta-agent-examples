@@ -36,7 +36,7 @@ def on_receive(data: dict) -> dict | None:
     print(result)
     # print("Current directory:", os.getcwd())
     # result = update_node_graph('/app/logs')
-    return result
+    return {'result': result}
 
 
 def on_destroy() -> dict | None:
