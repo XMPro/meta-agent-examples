@@ -1,5 +1,5 @@
 # TODO include example of this
-from src.packages.logs_to_node_graph.action_agent.source_code import foo
+from src.packages.logs_to_node_graph.action_agent.source_code.logs_to_neo4j import foo
 import os
 import json
 from datetime import datetime
