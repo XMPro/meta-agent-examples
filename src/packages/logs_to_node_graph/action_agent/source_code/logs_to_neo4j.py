@@ -57,9 +57,9 @@ def _update_neo4j_node_graph(events: dict):
                 continue
 
             session.write_transaction(_merge_stream_object, event)
-            session.write_transaction(_merge_sh_and_so_edge, event)
-            session.write_transaction(_merge_sh_collection_and_sh_edge, event)
-            session.write_transaction(_merge_ds_and_collection_edge, event)
+            session.write_transaction(_merge_sh_and_ds_edge, event)
+            session.write_transaction(_merge_collection_and_sh_edge, event)
+            session.write_transaction(_merge_ds_and_sh_edge, event)
             session.write_transaction(_merge_node_event_count, event)
 
 def _get_latest_log_file(log_directory, pattern="sh-log-*.json"):
@@ -167,35 +167,63 @@ def _merge_stream_object(tx, event):
         "last_updated": datetime.now(timezone.utc).isoformat()
     })
 
-def _merge_sh_and_so_edge(tx, event):
+def _merge_ds_and_sh_edge(tx, event):
     query = """
         MATCH (so:StreamObject {id: $so_id})
+    
+        MERGE (ds:DataStream {id: $ds_id})
+        SET ds.title = $ds_title,
+            ds.log_created = $log_created,
+            ds.last_updated = $last_updated
+        
+        WITH so, ds
+        
+        MERGE (ds)-[dsr:CONTAINS { 
+                id: $ds_rel_id
+            }]->(so)
+        ON CREATE SET dsr.source_id = $ds_id, 
+            dsr.target_id = $so_id,
+            dsr.last_updated = $last_updated
+    """
+
+    tx.run(query, {
+        "so_id": event['stream_object_id'],
+        "ds_id": event['data_stream_id'],
+        "ds_title": event['data_stream_name'],
+        "ds_rel_id": str(event['data_stream_id']) + "_" + str(event['stream_object_id']),
+        "log_created": event['timestamp'],
+        "last_updated": datetime.now(timezone.utc).isoformat()
+    })
+
+def _merge_sh_and_ds_edge(tx, event):
+    query = """
+        MATCH (ds:DataStream {id: $ds_id})
     
         MERGE (sh:StreamHost {id: $sh_id})
         SET sh.title = $sh_title,
             sh.log_created = $log_created,
             sh.last_updated = $last_updated
 
-        WITH so, sh
+        WITH ds, sh
 
         MERGE (sh)-[shr:EXECUTED { 
                 id: $sh_rel_id                
-            }]->(so)
+            }]->(ds)
         ON CREATE SET shr.source_id = $sh_id,
-            shr.target_id = $so_id,
+            shr.target_id = $ds_id,
             shr.last_updated = $last_updated
     """
 
     tx.run(query, {
-        "so_id": event['stream_object_id'],
-        "sh_rel_id": str(event['stream_host_id']) + "_" + str(event['stream_object_id']),
+        "ds_id": event['data_stream_id'],
+        "sh_rel_id": str(event['stream_host_id']) + "_" + str(event['data_stream_id']),
         "sh_id": event['stream_host_id'],
         "sh_title": event['stream_host_name'],
         "log_created": event['timestamp'],
         "last_updated": datetime.now(timezone.utc).isoformat()
     })
 
-def _merge_sh_collection_and_sh_edge(tx, event):
+def _merge_collection_and_sh_edge(tx, event):
     query = """
         MATCH (sh:StreamHost {id: $sh_id})
     
@@ -219,34 +247,6 @@ def _merge_sh_collection_and_sh_edge(tx, event):
         "collection_id": event['collection_id'],
         "collection_title": event['collection_id'],
         "collection_rel_id": str(event['collection_id']) + "_" + str(event['stream_host_id']),
-        "log_created": event['timestamp'],
-        "last_updated": datetime.now(timezone.utc).isoformat()
-    })
-
-def _merge_ds_and_collection_edge(tx, event):
-    query = """
-        MATCH (c:Collection {id: $collection_id})
-    
-        MERGE (ds:DataStream {id: $ds_id})
-        SET ds.title = $ds_title,
-            ds.log_created = $log_created,
-            ds.last_updated = $last_updated
-        
-        WITH c, ds
-        
-        MERGE (ds)-[dsr:CONTAINS { 
-                id: $ds_rel_id
-            }]->(c)
-        ON CREATE SET dsr.source_id = $ds_id, 
-            dsr.target_id = $collection_id,
-            dsr.last_updated = $last_updated
-    """
-
-    tx.run(query, {
-        "collection_id": event['collection_id'],
-        "ds_id": event['data_stream_id'],
-        "ds_title": event['data_stream_name'],
-        "ds_rel_id": str(event['data_stream_id']) + "_" + str(event['collection_id']),
         "log_created": event['timestamp'],
         "last_updated": datetime.now(timezone.utc).isoformat()
     })
