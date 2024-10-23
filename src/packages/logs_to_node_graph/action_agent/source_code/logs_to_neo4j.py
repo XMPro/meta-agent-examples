@@ -125,9 +125,9 @@ def _merge_sh_and_so_edge(tx, event):
         MERGE (sh)-[shr:EXECUTED { 
                 id: $sh_rel_id                
             }]->(so)
-        ON CREATE SET source_id = $sh_id,
-            target_id = $so_id,
-            last_updated = $last_updated
+        ON CREATE SET shr.source_id = $sh_id,
+            shr.target_id = $so_id,
+            shr.last_updated = $last_updated
     """
 
     tx.run(query, {
