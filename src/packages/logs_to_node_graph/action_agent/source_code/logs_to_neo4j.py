@@ -32,6 +32,7 @@ def _update_neo4j_node_graph(events: dict):
         with driver.session() as session:
             session.write_transaction(_merge_stream_object, event)
             session.write_transaction(_merge_sh_and_so_edge, event)
+            session.write_transaction(_merge_sh_collection_and_sh_edge, event)
 
 def _get_latest_log_file(log_directory, pattern="sh-log-*.json"):
     """
@@ -138,3 +139,31 @@ def _merge_sh_and_so_edge(tx, event):
         "log_created": event['timestamp'],
         "last_updated": datetime.now().isoformat(),
     })
+
+
+def _merge_sh_collection_and_sh_edge(tx, event):
+    query = """
+        MATCH (sh:StreamHost {id: $sh_id})
+    
+        MERGE (c:Collection {id: $collection_id})
+        SET c.title = $collection_title,
+            c.last_updated = $last_updated
+
+        WITH sh, c
+        
+        MERGE (c)-[cr:BELONGS_TO { 
+                id: $collection_rel_id
+            }]->(sh)
+        ON CREATE SET cr.source_id = $collection_id, 
+            cr.target_id = $sh_id,
+            cr.last_updated = $last_updated
+    """
+
+    tx.run(query, {
+        "sh_id": event['stream_host_id'],
+        "collection_id": event['collection_id'],
+        "collection_title": event['collection_title'],
+        "collection_rel_id": event['collection_id'] + "_" + event['stream_host_id'],
+        "last_updated": datetime.now().isoformat()
+    })
+
