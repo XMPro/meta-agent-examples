@@ -121,7 +121,7 @@ def _merge_sh_and_so_edge(tx, event):
     
         MERGE (sh:StreamHost {id: $sh_id})
         SET sh.title = $sh_title,
-            so.log_created = $log_created,
+            sh.log_created = $log_created,
             sh.last_updated = $last_updated
 
         WITH so, sh
@@ -150,7 +150,7 @@ def _merge_sh_collection_and_sh_edge(tx, event):
     
         MERGE (c:Collection {id: $collection_id})
         SET c.title = $collection_title,
-            so.log_created = $log_created,
+            c.log_created = $log_created,
             c.last_updated = $last_updated
 
         WITH sh, c
@@ -179,7 +179,7 @@ def _merge_ds_and_collection_edge(tx, event):
     
         MERGE (ds:DataStream {id: $ds_id})
         SET ds.title = $ds_title,
-            so.log_created = $log_created,
+            ds.log_created = $log_created,
             ds.last_updated = $last_updated
         
         WITH c, ds
