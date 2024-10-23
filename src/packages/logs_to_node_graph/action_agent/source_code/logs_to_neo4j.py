@@ -33,6 +33,7 @@ def _update_neo4j_node_graph(events: dict):
             session.write_transaction(_merge_stream_object, event)
             session.write_transaction(_merge_sh_and_so_edge, event)
             session.write_transaction(_merge_sh_collection_and_sh_edge, event)
+            session.write_transaction(_merge_ds_and_collection_edge, event)
 
 def _get_latest_log_file(log_directory, pattern="sh-log-*.json"):
     """
@@ -76,14 +77,14 @@ def _read_events(log_file_path):
 
                 events[key]['count'] += 1
                 events[key]['timestamp'] = log_entry['Timestamp']
-                events[key]['data_stream_id'] = stream.get('Id')
-                events[key]['data_stream_name'] = stream.get('Name')
                 events[key]['stream_object_id'] = agent.get('Id')
                 events[key]['stream_object_name'] = agent.get('Name')
                 events[key]['stream_object_type'] = agent.get('Type')
                 events[key]['stream_host_id'] = host.get('DeviceId')
                 events[key]['stream_host_name'] = host.get('Name')
                 events[key]['collection_id'] = host.get('CollectionId')
+                events[key]['data_stream_id'] = stream.get('Id')
+                events[key]['data_stream_name'] = stream.get('Name')
 
             except json.JSONDecodeError:
                 print(f"Error decoding JSON from line: {line}")
@@ -99,6 +100,7 @@ def _merge_stream_object(tx, event):
     SET so.title = $so_title,
         so.type = $so_type,
         so.event_count = $so_event_count,
+        so.log_created = $log_created,
         so.last_updated = $last_updated
     """
 
@@ -119,6 +121,7 @@ def _merge_sh_and_so_edge(tx, event):
     
         MERGE (sh:StreamHost {id: $sh_id})
         SET sh.title = $sh_title,
+            so.log_created = $log_created,
             sh.last_updated = $last_updated
 
         WITH so, sh
@@ -147,11 +150,12 @@ def _merge_sh_collection_and_sh_edge(tx, event):
     
         MERGE (c:Collection {id: $collection_id})
         SET c.title = $collection_title,
+            so.log_created = $log_created,
             c.last_updated = $last_updated
 
         WITH sh, c
         
-        MERGE (c)-[cr:BELONGS_TO { 
+        MERGE (c)-[cr:CONTAINS { 
                 id: $collection_rel_id
             }]->(sh)
         ON CREATE SET cr.source_id = $collection_id, 
@@ -163,7 +167,36 @@ def _merge_sh_collection_and_sh_edge(tx, event):
         "sh_id": event['stream_host_id'],
         "collection_id": event['collection_id'],
         "collection_title": event['collection_id'],
-        "collection_rel_id": event['collection_id'] + "_" + event['stream_host_id'],
+        "collection_rel_id": str(event['collection_id']) + "_" + str(event['stream_host_id']),
+        "log_created": event['timestamp'],
         "last_updated": datetime.now().isoformat()
     })
 
+
+def _merge_ds_and_collection_edge(tx, event):
+    query = """
+        MATCH (c:Collection {id: $collection_id})
+    
+        MERGE (ds:DataStream {id: $ds_id})
+        SET ds.title = $ds_title,
+            so.log_created = $log_created,
+            ds.last_updated = $last_updated
+        
+        WITH c, ds
+        
+        MERGE (ds)-[dsr:CONTAINS { 
+                id: $ds_rel_id
+            }]->(c)
+        ON CREATE SET dsr.source_id = $ds_id, 
+            dsr.target_id = $collection_id,
+            dsr.last_updated = $last_updated
+    """
+
+    tx.run(query, {
+        "collection_id": event['collection_id'],
+        "ds_id": event['data_stream_id'],
+        "ds_title": event['data_stream_title'],
+        "ds_rel_id": str(event['data_stream_id']) + "_" + str(event['collection_id']),
+        "log_created": event['timestamp'],
+        "last_updated": datetime.now().isoformat()
+    })
