@@ -132,7 +132,7 @@ def _merge_sh_and_so_edge(tx, event):
 
     tx.run(query, {
         "so_id": event['stream_object_id'],
-        "sh_rel_id": event['stream_host_id'] + "_" + event['stream_object_id'],
+        "sh_rel_id": str(event['stream_host_id']) + "_" + str(event['stream_object_id']),
         "sh_id": event['stream_host_id'],
         "sh_title": event['stream_host_name'],
         "log_created": event['timestamp'],
