@@ -195,7 +195,7 @@ def _merge_ds_and_collection_edge(tx, event):
     tx.run(query, {
         "collection_id": event['collection_id'],
         "ds_id": event['data_stream_id'],
-        "ds_title": event['data_stream_title'],
+        "ds_title": event['data_stream_name'],
         "ds_rel_id": str(event['data_stream_id']) + "_" + str(event['collection_id']),
         "log_created": event['timestamp'],
         "last_updated": datetime.now().isoformat()
