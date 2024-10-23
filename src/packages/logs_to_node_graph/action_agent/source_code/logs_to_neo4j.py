@@ -238,7 +238,7 @@ def _merge_ds_and_collection_edge(tx, event):
                 id: $ds_rel_id
             }]->(c)
         ON CREATE SET dsr.source_id = $ds_id, 
-            dtr.target_id = $collection_id,
+            dsr.target_id = $collection_id,
             dsr.last_updated = $last_updated
     """
 
