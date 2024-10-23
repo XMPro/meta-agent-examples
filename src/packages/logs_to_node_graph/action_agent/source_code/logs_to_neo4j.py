@@ -146,8 +146,7 @@ def _merge_sh_collection_and_sh_edge(tx, event):
         MATCH (sh:StreamHost {id: $sh_id})
     
         MERGE (c:Collection {id: $collection_id})
-        SET c.title = $collection_title,
-            c.last_updated = $last_updated
+        SET c.last_updated = $last_updated
 
         WITH sh, c
         
@@ -162,7 +161,6 @@ def _merge_sh_collection_and_sh_edge(tx, event):
     tx.run(query, {
         "sh_id": event['stream_host_id'],
         "collection_id": event['collection_id'],
-        "collection_title": event['collection_title'],
         "collection_rel_id": event['collection_id'] + "_" + event['stream_host_id'],
         "last_updated": datetime.now().isoformat()
     })
