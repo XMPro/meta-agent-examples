@@ -123,11 +123,11 @@ def _merge_sh_and_so_edge(tx, event):
         WITH so, sh
 
         MERGE (sh)-[shr:EXECUTED { 
-                id: $sh_rel_id, 
-                source_id: $sh_id,
-                target_id: $so_id,
-                last_updated: $last_updated
+                id: $sh_rel_id                
             }]->(so)
+        ON CREATE SET source_id = $sh_id,
+            target_id = $so_id,
+            last_updated = $last_updated
     """
 
     tx.run(query, {
