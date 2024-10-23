@@ -59,31 +59,6 @@ def on_destroy() -> dict | None:
 #     })
 
 
-# def _merge_sh_and_so_edge(tx):
-#     query = """
-#         MATCH (so:StreamObject {id: $so_id})
-    
-#         MERGE (sh:StreamHost {id: $sh_id})
-#         SET sh.title = $sh_title,
-#             sh.last_updated = $last_updated
-
-#         WITH so, sh
-
-#         MERGE (sh)-[shr:EXECUTED { 
-#                 id: $sh_rel_id, 
-#                 source_id: $sh_id,
-#                 target_id: $so_id,
-#                 last_updated: $last_updated
-#             }]->(so)
-#     """
-
-#     tx.run(query, {
-#         "so_id": stream_object_id,
-#         "sh_rel_id": stream_host_id + "_" + stream_object_id,
-#         "sh_id": stream_host_id,
-#         "sh_title": stream_host_title,
-#         "last_updated": datetime.now().isoformat()
-#     })
 
 
 # def _merge_sh_collection_and_sh_edge(tx):
