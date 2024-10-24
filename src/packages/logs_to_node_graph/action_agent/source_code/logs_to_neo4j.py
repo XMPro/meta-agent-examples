@@ -30,7 +30,7 @@ def _get_current_event_counts():
     with driver.session() as session:
         result = session.run("""
             MATCH (so:StreamObject)
-            RETURN so.id as id, so.event_count as count
+            RETURN so.node_id as id, so.event_count as count
         """)
         return {record["id"]: record["count"] for record in result}
 
@@ -149,8 +149,10 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
     return dict(events), latest_timestamp
 
 def _merge_stream_object(tx, event):
+    # node_id is used instead of id due to an unknown 500 error 
+    # when using the kniepdennis-neo4j-datasource in grafana 
     query = """
-    MERGE (so:StreamObject {id: $so_id})
+    MERGE (so:StreamObject {node_id: $so_id})
     SET so.title = $so_title,
         so.type = $so_type,
         so.event_count = $so_event_count,
@@ -169,9 +171,9 @@ def _merge_stream_object(tx, event):
 
 def _merge_ds_and_sh_edge(tx, event):
     query = """
-        MATCH (so:StreamObject {id: $so_id})
+        MATCH (so:StreamObject {node_id: $so_id})
     
-        MERGE (ds:DataStream {id: $ds_id})
+        MERGE (ds:DataStream {node_id: $ds_id})
         SET ds.title = $ds_title,
             ds.log_created = $log_created,
             ds.last_updated = $last_updated
@@ -197,9 +199,9 @@ def _merge_ds_and_sh_edge(tx, event):
 
 def _merge_sh_and_ds_edge(tx, event):
     query = """
-        MATCH (ds:DataStream {id: $ds_id})
+        MATCH (ds:DataStream {node_id: $ds_id})
     
-        MERGE (sh:StreamHost {id: $sh_id})
+        MERGE (sh:StreamHost {node_id: $sh_id})
         SET sh.title = $sh_title,
             sh.log_created = $log_created,
             sh.last_updated = $last_updated
@@ -225,9 +227,9 @@ def _merge_sh_and_ds_edge(tx, event):
 
 def _merge_collection_and_sh_edge(tx, event):
     query = """
-        MATCH (sh:StreamHost {id: $sh_id})
+        MATCH (sh:StreamHost {node_id: $sh_id})
     
-        MERGE (c:Collection {id: $collection_id})
+        MERGE (c:Collection {node_id: $collection_id})
         SET c.title = $collection_title,
             c.log_created = $log_created,
             c.last_updated = $last_updated
@@ -253,7 +255,7 @@ def _merge_collection_and_sh_edge(tx, event):
 
 def _merge_node_event_count(tx, event):
     query = """
-    MERGE (so:StreamObject {id: $so_id})
+    MERGE (so:StreamObject {node_id: $so_id})
     SET so.event_count = $so_event_count,
         so.last_updated = $last_updated
     """
