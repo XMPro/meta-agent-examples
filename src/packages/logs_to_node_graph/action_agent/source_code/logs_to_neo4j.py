@@ -115,13 +115,15 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                 host = properties.get('Host', {})
 
                 so_id = agent.get('Id')
-                if so_id is not None:
+                elapsed_time = properties.get('ElapsedTime')
+                if so_id is not None and elapsed_time is not None and elapsed_time > 0:
                     key = str(so_id)
                     
                     # Increment event count
                     current_count = events[key]['stream_object_event_count']
                     events[key].update({
                         'timestamp': timestamp,
+                        'elapsed_time': elapsed_time,
                         'stream_object_id': str(so_id),
                         'stream_object_name': agent.get('Name'),
                         'stream_object_type': agent.get('Type'),
