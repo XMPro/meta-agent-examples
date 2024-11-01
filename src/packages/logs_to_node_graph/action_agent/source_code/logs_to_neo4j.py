@@ -86,7 +86,8 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
         'stream_host_id': None,
         'stream_host_name': None,
         'collection_id': None,
-        'stream_object_event_count': 0
+        'stream_object_event_count': 0,
+        'stream_object_error_count': 0
     })
 
     # Initialize with current counts
@@ -115,15 +116,20 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                 host = properties.get('Host', {})
 
                 so_id = agent.get('Id')
+                is_stream_object_event = so_id is not None
+                
+                # TODO implement total elapsed time
                 elapsed_time = properties.get('ElapsedTime')
-                if so_id is not None and elapsed_time is not None and elapsed_time > 0:
+                is_stream_object_event_completed = elapsed_time is not None and elapsed_time > 0
+                
+                level = log_entry.get('Level')
+                is_stream_object_event_error = level == 'Error'
+                
+                if is_stream_object_event and (is_stream_object_event_completed or is_stream_object_event_error):
                     key = str(so_id)
                     
-                    # Increment event count
-                    current_count = events[key]['stream_object_event_count']
                     events[key].update({
                         'timestamp': timestamp,
-                        'elapsed_time': elapsed_time,
                         'stream_object_id': str(so_id),
                         'stream_object_name': agent.get('Name'),
                         'stream_object_type': agent.get('Type'),
@@ -131,14 +137,21 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                         'stream_host_name': host.get('Name'),
                         'collection_id': str(host.get('CollectionId')),
                         'data_stream_id': str(stream.get('Id')),
-                        'data_stream_name': stream.get('Name'),
-                        'stream_object_event_count': current_count + 1
+                        'data_stream_name': stream.get('Name')
                     })
 
                     # Update latest timestamp
                     if latest_timestamp is None or timestamp > latest_timestamp:
                         latest_timestamp = timestamp
-
+                
+                    if is_stream_object_event_completed:
+                        # Increment event count
+                        current_count = events[key]['stream_object_event_count']
+                        events[key]['stream_object_event_count'] = current_count + 1
+                    elif is_stream_object_event_error:
+                        error_count = events[key].get('stream_object_error_count', 0)
+                        events[key]['stream_object_error_count'] = error_count + 1
+                
             except json.JSONDecodeError:
                 print(f"Error decoding JSON from line: {line}")
             except KeyError as e:
