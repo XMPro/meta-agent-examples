@@ -58,8 +58,11 @@ def update_node_graph(log_directory):
         latest_log_file, last_timestamp, current_counts)
 
     if events:
+        print(f"Events to update: {events}")
         _update_neo4j_node_graph(events)
         _save_last_processed_timestamp(latest_timestamp, log_directory)
+
+    driver.close()
 
     return events
 
@@ -151,7 +154,7 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                     key = str(so_id)
 
                     # get event_count or set to 0
-                    event_count = events[key]['stream_object_event_count', 0]
+                    event_count = events[key].get('stream_object_event_count', 0)
                     events[key]['stream_object_event_count'] = event_count + 1
 
                     events[key].update({
@@ -173,11 +176,10 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
 
                     if is_stream_object_event_completed:
                         # Increment event complete count
-                        event_complete_count = events[key]['stream_object_event_complete_count', 0]
+                        event_complete_count = events[key].get('stream_object_event_complete_count', 0)
                         events[key]['stream_object_event_complete_count'] = event_complete_count + 1
                     elif is_stream_object_event_error:
-                        event_failed_count = events[key].get(
-                            'stream_object_event_failed_count', 0)
+                        event_failed_count = events[key].get('stream_object_event_failed_count', 0)
                         events[key]['stream_object_event_failed_count'] = event_failed_count + 1
 
             except json.JSONDecodeError:
