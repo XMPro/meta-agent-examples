@@ -15,6 +15,7 @@ driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
 
 LAST_PROCESSED_FILE = "last_processed_timestamp.txt"
 
+
 def _get_last_processed_timestamp():
     try:
         with open(LAST_PROCESSED_FILE, 'r') as f:
@@ -22,34 +23,45 @@ def _get_last_processed_timestamp():
     except FileNotFoundError:
         return None
 
+
 def _save_last_processed_timestamp(timestamp):
     with open(LAST_PROCESSED_FILE, 'w') as f:
         f.write(timestamp)
 
-# def _get_current_event_counts():
-#     with driver.session() as session:
-#         result = session.run("""
-#             MATCH (so:StreamObject)
-#             RETURN so.node_id as id, so.event_complete_count as count
-#         """)
-#         return {record["id"]: record["count"] for record in result}
+
+def _get_current_event_counts():
+    with driver.session() as session:
+        result = session.run("""
+            MATCH (so:StreamObject)
+            RETURN so.node_id as id, 
+                so.event_count as event_count,
+                so.event_complete_count as event_complete_count,
+                so.event_failed_count as event_failed_count
+        """)
+        return {record["id"]: {
+            "event_count": record["event_count"],
+            "event_complete_count": record["event_complete_count"],
+            "event_failed_count": record["event_failed_count"]
+        } for record in result}
+
 
 def update_node_graph(log_directory):
     latest_log_file = _get_latest_log_file(log_directory)
     last_timestamp = _get_last_processed_timestamp()
-    
+
     # Get current counts from Neo4j
-    # current_counts = _get_current_event_complete_counts()
-    current_counts = {}
-    
+    current_counts = _get_current_event_counts()
+
     # Read only new events
-    events, latest_timestamp = _read_events(latest_log_file, last_timestamp, current_counts)
-    
+    events, latest_timestamp = _read_events(
+        latest_log_file, last_timestamp, current_counts)
+
     if events:
         _update_neo4j_node_graph(events)
         _save_last_processed_timestamp(latest_timestamp)
-    
+
     return events
+
 
 def _update_neo4j_node_graph(events: dict):
     with driver.session() as session:
@@ -63,6 +75,7 @@ def _update_neo4j_node_graph(events: dict):
             session.write_transaction(_merge_ds_and_sh_edge, event)
             # session.write_transaction(_merge_node_event_complete_count, event)
 
+
 def _get_latest_log_file(log_directory, pattern="sh-log-*.json"):
     """
     Find the most recently created log file in the specified directory
@@ -71,10 +84,12 @@ def _get_latest_log_file(log_directory, pattern="sh-log-*.json"):
     log_files = glob.glob(os.path.join(log_directory, pattern))
 
     if not log_files:
-        raise FileNotFoundError(f"No log files found matching pattern '{pattern}' in {log_directory}")
+        raise FileNotFoundError(f"No log files found matching pattern '{
+                                pattern}' in {log_directory}")
 
     latest_file = max(log_files, key=os.path.getctime)
     return latest_file
+
 
 def _read_events(log_file_path, last_processed_timestamp, current_counts):
     events = defaultdict(lambda: {
@@ -87,14 +102,17 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
         'stream_host_id': None,
         'stream_host_name': None,
         'collection_id': None,
+        'stream_object_event_count': 0,
         'stream_object_event_complete_count': 0,
         'stream_object_event_failed_count': 0
     })
 
-    # # Initialize with current counts
-    # for so_id, count in current_counts.items():
-    #     if so_id is not None:
-    #         events[str(so_id)]['stream_object_event_complete_count'] = count
+    # Initialize with current counts
+    for so_id in current_counts.items():
+        if so_id is not None:
+            events[str(so_id)]['stream_object_event_count'] = current_counts[so_id]['event_count']
+            events[str(so_id)]['stream_object_event_complete_count'] = current_counts[so_id]['event_complete_count']
+            events[str(so_id)]['stream_object_event_failed_count'] = current_counts[so_id]['event_failed_count']
 
     latest_timestamp = last_processed_timestamp
     new_events_found = False
@@ -105,7 +123,7 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
             try:
                 log_entry = json.loads(line)
                 timestamp = log_entry['Timestamp']
-                
+
                 # Skip if we've already processed this timestamp
                 if last_processed_timestamp and timestamp <= last_processed_timestamp:
                     continue
@@ -118,17 +136,20 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
 
                 so_id = agent.get('Id')
                 is_stream_object_event = so_id is not None
-                
+
                 # TODO implement total elapsed time
                 elapsed_time = properties.get('ElapsedTime')
                 is_stream_object_event_completed = elapsed_time is not None and elapsed_time > 0
-                
+
                 level = log_entry.get('Level')
                 is_stream_object_event_error = level == 'Error'
-                
+
                 if is_stream_object_event and (is_stream_object_event_completed or is_stream_object_event_error):
                     key = str(so_id)
-                    
+
+                    event_count = events[key]['stream_object_event_count']
+                    events[key]['stream_object_event_count'] = event_count + 1
+
                     events[key].update({
                         'timestamp': timestamp,
                         'stream_object_id': str(so_id),
@@ -138,21 +159,23 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                         'stream_host_name': host.get('Name'),
                         'collection_id': str(host.get('CollectionId')),
                         'data_stream_id': str(stream.get('Id')),
-                        'data_stream_name': stream.get('Name')
+                        'data_stream_name': stream.get('Name'),
+                        'stream_object_event_count': events[key]['stream_object_event_count'],
                     })
 
                     # Update latest timestamp
                     if latest_timestamp is None or timestamp > latest_timestamp:
                         latest_timestamp = timestamp
-                
+
                     if is_stream_object_event_completed:
                         # Increment event complete count
-                        complete_count = events[key]['stream_object_event_complete_count']
-                        events[key]['stream_object_event_complete_count'] = complete_count + 1
+                        event_complete_count = events[key]['stream_object_event_complete_count']
+                        events[key]['stream_object_event_complete_count'] = event_complete_count + 1
                     elif is_stream_object_event_error:
-                        failed_count = events[key].get('stream_object_event_failed_count', 0)
-                        events[key]['stream_object_event_failed_count'] = failed_count + 1
-                
+                        event_failed_count = events[key].get(
+                            'stream_object_event_failed_count', 0)
+                        events[key]['stream_object_event_failed_count'] = event_failed_count + 1
+
             except json.JSONDecodeError:
                 print(f"Error decoding JSON from line: {line}")
             except KeyError as e:
@@ -164,9 +187,10 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
 
     return dict(events), latest_timestamp
 
+
 def _merge_stream_object(tx, event):
-    # node_id is used instead of id due strange behavior with the id property 
-    # when using the kniepdennis-neo4j-datasource in grafana 
+    # node_id is used instead of id due strange behavior with the id property
+    # when using the kniepdennis-neo4j-datasource in grafana
     query = """
     MERGE (so:StreamObject {node_id: $so_id})
     SET so.title = $so_title,
@@ -186,6 +210,7 @@ def _merge_stream_object(tx, event):
         "log_created": event['timestamp'],
         "last_updated": datetime.now(timezone.utc).isoformat()
     })
+
 
 def _merge_ds_and_sh_edge(tx, event):
     query = """
@@ -215,6 +240,7 @@ def _merge_ds_and_sh_edge(tx, event):
         "last_updated": datetime.now(timezone.utc).isoformat()
     })
 
+
 def _merge_sh_and_ds_edge(tx, event):
     query = """
         MATCH (ds:DataStream {node_id: $ds_id})
@@ -242,6 +268,7 @@ def _merge_sh_and_ds_edge(tx, event):
         "log_created": event['timestamp'],
         "last_updated": datetime.now(timezone.utc).isoformat()
     })
+
 
 def _merge_collection_and_sh_edge(tx, event):
     query = """
