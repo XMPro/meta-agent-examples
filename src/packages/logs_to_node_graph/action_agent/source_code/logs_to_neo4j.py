@@ -26,20 +26,21 @@ def _save_last_processed_timestamp(timestamp):
     with open(LAST_PROCESSED_FILE, 'w') as f:
         f.write(timestamp)
 
-def _get_current_event_counts():
-    with driver.session() as session:
-        result = session.run("""
-            MATCH (so:StreamObject)
-            RETURN so.node_id as id, so.event_count as count
-        """)
-        return {record["id"]: record["count"] for record in result}
+# def _get_current_event_counts():
+#     with driver.session() as session:
+#         result = session.run("""
+#             MATCH (so:StreamObject)
+#             RETURN so.node_id as id, so.event_complete_count as count
+#         """)
+#         return {record["id"]: record["count"] for record in result}
 
 def update_node_graph(log_directory):
     latest_log_file = _get_latest_log_file(log_directory)
     last_timestamp = _get_last_processed_timestamp()
     
     # Get current counts from Neo4j
-    current_counts = _get_current_event_counts()
+    # current_counts = _get_current_event_complete_counts()
+    current_counts = {}
     
     # Read only new events
     events, latest_timestamp = _read_events(latest_log_file, last_timestamp, current_counts)
@@ -60,7 +61,7 @@ def _update_neo4j_node_graph(events: dict):
             session.write_transaction(_merge_sh_and_ds_edge, event)
             session.write_transaction(_merge_collection_and_sh_edge, event)
             session.write_transaction(_merge_ds_and_sh_edge, event)
-            session.write_transaction(_merge_node_event_count, event)
+            # session.write_transaction(_merge_node_event_complete_count, event)
 
 def _get_latest_log_file(log_directory, pattern="sh-log-*.json"):
     """
@@ -86,14 +87,14 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
         'stream_host_id': None,
         'stream_host_name': None,
         'collection_id': None,
-        'stream_object_event_count': 0,
-        'stream_object_error_count': 0
+        'stream_object_event_complete_count': 0,
+        'stream_object_event_failed_count': 0
     })
 
-    # Initialize with current counts
-    for so_id, count in current_counts.items():
-        if so_id is not None:
-            events[str(so_id)]['stream_object_event_count'] = count
+    # # Initialize with current counts
+    # for so_id, count in current_counts.items():
+    #     if so_id is not None:
+    #         events[str(so_id)]['stream_object_event_complete_count'] = count
 
     latest_timestamp = last_processed_timestamp
     new_events_found = False
@@ -145,12 +146,12 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                         latest_timestamp = timestamp
                 
                     if is_stream_object_event_completed:
-                        # Increment event count
-                        current_count = events[key]['stream_object_event_count']
-                        events[key]['stream_object_event_count'] = current_count + 1
+                        # Increment event complete count
+                        complete_count = events[key]['stream_object_event_complete_count']
+                        events[key]['stream_object_event_complete_count'] = complete_count + 1
                     elif is_stream_object_event_error:
-                        error_count = events[key].get('stream_object_error_count', 0)
-                        events[key]['stream_object_error_count'] = error_count + 1
+                        failed_count = events[key].get('stream_object_event_failed_count', 0)
+                        events[key]['stream_object_event_failed_count'] = failed_count + 1
                 
             except json.JSONDecodeError:
                 print(f"Error decoding JSON from line: {line}")
@@ -170,7 +171,8 @@ def _merge_stream_object(tx, event):
     MERGE (so:StreamObject {node_id: $so_id})
     SET so.title = $so_title,
         so.type = $so_type,
-        so.event_count = $so_event_count,
+        so.event_complete_count = $so_event_complete_count,
+        so.event_failed_count = $so_event_failed_count,
         so.log_created = $log_created,
         so.last_updated = $last_updated
     """
@@ -179,7 +181,8 @@ def _merge_stream_object(tx, event):
         "so_id": event['stream_object_id'],
         "so_title": event['stream_object_name'],
         "so_type": event['stream_object_type'],
-        "so_event_count": event['stream_object_event_count'],
+        "so_event_complete_count": event['stream_object_event_complete_count'],
+        "so_event_failed_count": event['stream_object_event_failed_count'],
         "log_created": event['timestamp'],
         "last_updated": datetime.now(timezone.utc).isoformat()
     })
@@ -268,15 +271,15 @@ def _merge_collection_and_sh_edge(tx, event):
         "last_updated": datetime.now(timezone.utc).isoformat()
     })
 
-def _merge_node_event_count(tx, event):
-    query = """
-    MERGE (so:StreamObject {node_id: $so_id})
-    SET so.event_count = $so_event_count,
-        so.last_updated = $last_updated
-    """
+# def _merge_node_event_complete_count(tx, event):
+#     query = """
+#     MERGE (so:StreamObject {node_id: $so_id})
+#     SET so.event_complete_count = $so_event_complete_count,
+#         so.last_updated = $last_updated
+#     """
 
-    tx.run(query, {
-        "so_id": event['stream_object_id'],
-        "so_event_count": event['stream_object_event_count'],
-        "last_updated": datetime.now(timezone.utc).isoformat()
-    })
+#     tx.run(query, {
+#         "so_id": event['stream_object_id'],
+#         "so_event_complete_count": event['stream_object_event_complete_count'],
+#         "last_updated": datetime.now(timezone.utc).isoformat()
+#     })
