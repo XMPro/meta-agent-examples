@@ -199,6 +199,7 @@ def _merge_stream_object(tx, event):
     MERGE (so:StreamObject {node_id: $so_id})
     SET so.title = $so_title,
         so.type = $so_type,
+        so.event_count = $so_event_count,
         so.event_complete_count = $so_event_complete_count,
         so.event_failed_count = $so_event_failed_count,
         so.log_created = $log_created,
@@ -209,6 +210,7 @@ def _merge_stream_object(tx, event):
         "so_id": event['stream_object_id'],
         "so_title": event['stream_object_name'],
         "so_type": event['stream_object_type'],
+        "so_event_count": event['stream_object_event_count'],
         "so_event_complete_count": event['stream_object_event_complete_count'],
         "so_event_failed_count": event['stream_object_event_failed_count'],
         "log_created": event['timestamp'],
