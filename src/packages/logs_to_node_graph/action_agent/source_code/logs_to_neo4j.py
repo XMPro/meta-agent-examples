@@ -16,16 +16,17 @@ driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
 LAST_PROCESSED_FILE = "last_processed_timestamp.txt"
 
 
-def _get_last_processed_timestamp():
+def _get_last_processed_timestamp(log_directory):
     try:
-        with open(LAST_PROCESSED_FILE, 'r') as f:
+        # open file in log_directory to read last processed timestamp
+        with open(log_directory + '/' + LAST_PROCESSED_FILE, 'r') as f:
             return f.read().strip()
     except FileNotFoundError:
         return None
 
 
-def _save_last_processed_timestamp(timestamp):
-    with open(LAST_PROCESSED_FILE, 'w') as f:
+def _save_last_processed_timestamp(timestamp, log_directory):
+    with open(log_directory + '/' + LAST_PROCESSED_FILE, 'w') as f:
         f.write(timestamp)
 
 
@@ -47,7 +48,7 @@ def _get_current_event_counts():
 
 def update_node_graph(log_directory):
     latest_log_file = _get_latest_log_file(log_directory)
-    last_timestamp = _get_last_processed_timestamp()
+    last_timestamp = _get_last_processed_timestamp(log_directory)
 
     # Get current counts from Neo4j
     current_counts = _get_current_event_counts()
@@ -58,7 +59,7 @@ def update_node_graph(log_directory):
 
     if events:
         _update_neo4j_node_graph(events)
-        _save_last_processed_timestamp(latest_timestamp)
+        _save_last_processed_timestamp(latest_timestamp, log_directory)
 
     return events
 
@@ -84,7 +85,8 @@ def _get_latest_log_file(log_directory, pattern="sh-log-*.json"):
     log_files = glob.glob(os.path.join(log_directory, pattern))
 
     if not log_files:
-        raise FileNotFoundError(f"No log files found matching pattern '{pattern}' in {log_directory}")
+        raise FileNotFoundError(f"No log files found matching pattern '{
+                                pattern}' in {log_directory}")
 
     latest_file = max(log_files, key=os.path.getctime)
     return latest_file
@@ -109,9 +111,12 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
     # Initialize with current counts
     for so_id in current_counts:
         if so_id is not None:
-            events[str(so_id)]['stream_object_event_count'] = current_counts[so_id]['event_count']
-            events[str(so_id)]['stream_object_event_complete_count'] = current_counts[so_id]['event_complete_count']
-            events[str(so_id)]['stream_object_event_failed_count'] = current_counts[so_id]['event_failed_count']
+            events[str(
+                so_id)]['stream_object_event_count'] = current_counts[so_id]['event_count']
+            events[str(
+                so_id)]['stream_object_event_complete_count'] = current_counts[so_id]['event_complete_count']
+            events[str(
+                so_id)]['stream_object_event_failed_count'] = current_counts[so_id]['event_failed_count']
 
     latest_timestamp = last_processed_timestamp
     new_events_found = False
@@ -145,7 +150,7 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
 
                 if is_stream_object_event and (is_stream_object_event_completed or is_stream_object_event_error):
                     key = str(so_id)
-                    
+
                     # get event_count or set to 0
                     event_count = events[key]['stream_object_event_count', 0]
                     events[key]['stream_object_event_count'] = event_count + 1
