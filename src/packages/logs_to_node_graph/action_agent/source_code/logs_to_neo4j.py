@@ -145,8 +145,9 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
 
                 if is_stream_object_event and (is_stream_object_event_completed or is_stream_object_event_error):
                     key = str(so_id)
-
-                    event_count = events[key]['stream_object_event_count']
+                    
+                    # get event_count or set to 0
+                    event_count = events[key]['stream_object_event_count', 0]
                     events[key]['stream_object_event_count'] = event_count + 1
 
                     events[key].update({
@@ -168,7 +169,7 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
 
                     if is_stream_object_event_completed:
                         # Increment event complete count
-                        event_complete_count = events[key]['stream_object_event_complete_count']
+                        event_complete_count = events[key]['stream_object_event_complete_count', 0]
                         events[key]['stream_object_event_complete_count'] = event_complete_count + 1
                     elif is_stream_object_event_error:
                         event_failed_count = events[key].get(
