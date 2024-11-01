@@ -107,7 +107,7 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
     })
 
     # Initialize with current counts
-    for so_id in current_counts.items():
+    for so_id in current_counts:
         if so_id is not None:
             events[str(so_id)]['stream_object_event_count'] = current_counts[so_id]['event_count']
             events[str(so_id)]['stream_object_event_complete_count'] = current_counts[so_id]['event_complete_count']
