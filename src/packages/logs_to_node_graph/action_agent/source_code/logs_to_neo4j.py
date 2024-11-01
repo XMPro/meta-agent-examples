@@ -85,8 +85,7 @@ def _get_latest_log_file(log_directory, pattern="sh-log-*.json"):
     log_files = glob.glob(os.path.join(log_directory, pattern))
 
     if not log_files:
-        raise FileNotFoundError(f"No log files found matching pattern '{
-                                pattern}' in {log_directory}")
+        raise FileNotFoundError(f"No log files found matching pattern '{pattern}' in {log_directory}")
 
     latest_file = max(log_files, key=os.path.getctime)
     return latest_file
