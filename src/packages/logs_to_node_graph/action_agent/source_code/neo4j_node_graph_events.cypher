@@ -7,7 +7,7 @@ CALL {
            labels(so)[0] as subtitle,
            toString(so.event_count) AS mainstat,
            1.0 AS arc__events_complete,
-           0.0 AS arc__events_queued
+           0.0 AS arc__events_pending
     
     UNION ALL
     
@@ -22,7 +22,7 @@ CALL {
            labels(ds)[0] as subtitle,
            toString(event_count_sum) as mainstat,
            toFloat(event_count_sum) / (max_event_count * count) as arc__events_complete,
-           1 - toFloat(event_count_sum) / (max_event_count * count) as arc__events_queued
+           1 - toFloat(event_count_sum) / (max_event_count * count) as arc__events_pending
            
     UNION ALL
     
@@ -40,7 +40,7 @@ CALL {
            labels(sh)[0] as subtitle,
            toString(total_event_count) as mainstat,
            toFloat(total_event_count) / total_max_events as arc__events_complete,
-           1 - toFloat(total_event_count) / total_max_events as arc__events_queued
+           1 - toFloat(total_event_count) / total_max_events as arc__events_pending
            
     UNION ALL
     
@@ -58,6 +58,6 @@ CALL {
            labels(c)[0] as subtitle,
            toString(total_event_count) as mainstat,
            toFloat(total_event_count) / total_max_events as arc__events_complete,
-           1 - toFloat(total_event_count) / total_max_events as arc__events_queued
+           1 - toFloat(total_event_count) / total_max_events as arc__events_pending
 }
 RETURN *

@@ -143,19 +143,14 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                 so_id = agent.get('Id')
                 is_stream_object_event = so_id is not None
 
-                # TODO implement total elapsed time
-                elapsed_time = properties.get('ElapsedTime')
-                is_stream_object_event_completed = elapsed_time is not None and elapsed_time > 0
-
-                level = log_entry.get('Level')
-                is_stream_object_event_error = level == 'Error'
-
-                if is_stream_object_event and (is_stream_object_event_completed or is_stream_object_event_error):
+                # TODO implement total elapsed time in node graph
+                is_started = log_entry.get('MessageTemplate') == 'Agent process {AgentProcessName} started'
+                is_completed = log_entry.get('MessageTemplate') == 'Agent process {AgentProcessName} completed time {ElapsedTime} secs'
+                is_error = log_entry.get('MessageTemplate') == 'Agent reported an error'
+                is_stream_object_event = is_started or is_completed  or is_error
+                
+                if is_stream_object_event:
                     key = str(so_id)
-
-                    # get event_count or set to 0
-                    event_count = events[key].get('stream_object_event_count', 0)
-                    events[key]['stream_object_event_count'] = event_count + 1
 
                     events[key].update({
                         'timestamp': timestamp,
@@ -173,12 +168,17 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                     # Update latest timestamp
                     if latest_timestamp is None or timestamp > latest_timestamp:
                         latest_timestamp = timestamp
-
-                    if is_stream_object_event_completed:
+                    
+                    if is_started:
+                        # get event_count or set to 0
+                        event_count = events[key].get('stream_object_event_count', 0)
+                        events[key]['stream_object_event_count'] = event_count + 1
+                    
+                    elif is_completed:
                         # Increment event complete count
                         event_complete_count = events[key].get('stream_object_event_complete_count', 0)
                         events[key]['stream_object_event_complete_count'] = event_complete_count + 1
-                    elif is_stream_object_event_error:
+                    elif is_error:
                         event_failed_count = events[key].get('stream_object_event_failed_count', 0)
                         events[key]['stream_object_event_failed_count'] = event_failed_count + 1
 
