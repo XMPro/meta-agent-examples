@@ -105,7 +105,7 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
         'stream_host_id': None,
         'stream_host_name': None,
         'collection_id': None,
-        'stream_object_event_count': 0,
+        'stream_object_event_started_count': 0,
         'stream_object_event_complete_count': 0,
         'stream_object_event_failed_count': 0
     })
@@ -114,7 +114,7 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
     for so_id in current_counts:
         if so_id is not None:
             events[str(
-                so_id)]['stream_object_event_count'] = current_counts[so_id]['event_count']
+                so_id)]['stream_object_event_started_count'] = current_counts[so_id]['event_count']
             events[str(
                 so_id)]['stream_object_event_complete_count'] = current_counts[so_id]['event_complete_count']
             events[str(
@@ -161,8 +161,7 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                         'stream_host_name': host.get('Name'),
                         'collection_id': str(host.get('CollectionId')),
                         'data_stream_id': str(stream.get('Id')),
-                        'data_stream_name': stream.get('Name'),
-                        'stream_object_event_count': events[key]['stream_object_event_count'],
+                        'data_stream_name': stream.get('Name')
                     })
 
                     # Update latest timestamp
@@ -171,8 +170,8 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                     
                     if is_started:
                         # get event_count or set to 0
-                        event_count = events[key].get('stream_object_event_count', 0)
-                        events[key]['stream_object_event_count'] = event_count + 1
+                        event_started_count = events[key].get('stream_object_event_started_count', 0)
+                        events[key]['stream_object_event_started_count'] = event_started_count + 1
                     
                     elif is_completed:
                         # Increment event complete count
@@ -212,7 +211,7 @@ def _merge_stream_object(tx, event):
         "so_id": event['stream_object_id'],
         "so_title": event['stream_object_name'],
         "so_type": event['stream_object_type'],
-        "so_event_count": event['stream_object_event_count'],
+        "so_event_count": event['stream_object_event_started_count'],
         "so_event_complete_count": event['stream_object_event_complete_count'],
         "so_event_failed_count": event['stream_object_event_failed_count'],
         "log_created": event['timestamp'],
