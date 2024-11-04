@@ -113,12 +113,11 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
     # Initialize with current counts
     for so_id in current_counts:
         if so_id is not None:
-            events[str(
-                so_id)]['stream_object_event_started_count'] = current_counts[so_id]['event_started_count']
-            events[str(
-                so_id)]['stream_object_event_complete_count'] = current_counts[so_id]['event_complete_count']
-            events[str(
-                so_id)]['stream_object_event_failed_count'] = current_counts[so_id]['event_failed_count']
+            events[str(so_id)].update({
+                'stream_object_event_started_count': current_counts[so_id]['event_started_count'],
+                'stream_object_event_complete_count': current_counts[so_id]['event_complete_count'],
+                'stream_object_event_failed_count': current_counts[so_id]['event_failed_count']
+            })
 
     latest_timestamp = last_processed_timestamp
     new_events_found = False
@@ -141,17 +140,17 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                 host = properties.get('Host', {})
 
                 so_id = agent.get('Id')
-                is_stream_object_event = so_id is not None
-
-                # TODO implement total elapsed time in node graph
+                
+                # Define event types
                 is_started = log_entry.get('MessageTemplate') == 'Agent process {AgentProcessName} started'
                 is_completed = log_entry.get('MessageTemplate') == 'Agent process {AgentProcessName} completed time {ElapsedTime} secs'
                 is_error = log_entry.get('MessageTemplate') == 'Agent reported an error'
-                is_stream_object_event = is_started or is_completed  or is_error
+                is_stream_object_event = is_started or is_completed or is_error
                 
-                if is_stream_object_event:
+                if is_stream_object_event and so_id is not None:
                     key = str(so_id)
 
+                    # Update base event information
                     events[key].update({
                         'timestamp': timestamp,
                         'stream_object_id': str(so_id),
@@ -168,23 +167,16 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                     if latest_timestamp is None or timestamp > latest_timestamp:
                         latest_timestamp = timestamp
                     
-                    
+                    # Handle event counting
                     if is_completed:
-                        # Increment event complete count
-                        event_complete_count = events[key].get('stream_object_event_complete_count', 0)
-                        events[key]['stream_object_event_complete_count'] = event_complete_count + 1
+                        events[key]['stream_object_event_complete_count'] += 1
+                        # Ensure started count is at least equal to complete count
+                        if events[key]['stream_object_event_started_count'] < events[key]['stream_object_event_complete_count']:
+                            events[key]['stream_object_event_started_count'] = events[key]['stream_object_event_complete_count']
                     elif is_started:
-                        event_complete_count = events[key].get('stream_object_event_complete_count', 0)
-                        event_started_count = events[key].get('stream_object_event_started_count', 0)
-                        
-                        # Correct logic: ensure event_started_count is updated if it's less than event_complete_count
-                        if event_started_count < event_complete_count:
-                            events[key]['stream_object_event_started_count'] = event_complete_count
-                        else:
-                            events[key]['stream_object_event_started_count'] = event_started_count + 1
+                        events[key]['stream_object_event_started_count'] += 1
                     elif is_error:
-                        event_failed_count = events[key].get('stream_object_event_failed_count', 0)
-                        events[key]['stream_object_event_failed_count'] = event_failed_count + 1
+                        events[key]['stream_object_event_failed_count'] += 1
 
             except json.JSONDecodeError:
                 print(f"Error decoding JSON from line: {line}")
