@@ -169,8 +169,11 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                         latest_timestamp = timestamp
                     
                     if is_started:
-                        # get event_started_count or set to 0
                         event_started_count = events[key].get('stream_object_event_started_count', 0)
+                        
+                        # currently the listener agents only log one started event, so we use the event_complete_count
+                        if event_started_count < event_complete_count:
+                            event_started_count = event_complete_count
                         events[key]['stream_object_event_started_count'] = event_started_count + 1
                     
                     elif is_completed:
