@@ -177,10 +177,11 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                         event_complete_count = events[key].get('stream_object_event_complete_count', 0)
                         event_started_count = events[key].get('stream_object_event_started_count', 0)
                         
-                        # currently the listener agents only log one started event, so we use the event_complete_count
+                        # Correct logic: ensure event_started_count is updated if it's less than event_complete_count
                         if event_started_count < event_complete_count:
-                            event_started_count = event_complete_count
-                        events[key]['stream_object_event_started_count'] = event_started_count + 1
+                            events[key]['stream_object_event_started_count'] = event_complete_count
+                        else:
+                            events[key]['stream_object_event_started_count'] = event_started_count + 1
                     elif is_error:
                         event_failed_count = events[key].get('stream_object_event_failed_count', 0)
                         events[key]['stream_object_event_failed_count'] = event_failed_count + 1
