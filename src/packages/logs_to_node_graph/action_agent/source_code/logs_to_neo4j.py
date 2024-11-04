@@ -30,17 +30,17 @@ def _save_last_processed_timestamp(timestamp, log_directory):
         f.write(timestamp)
 
 
-def _get_current_event_counts():
+def _get_current_event_started_counts():
     with driver.session() as session:
         result = session.run("""
             MATCH (so:StreamObject)
             RETURN so.node_id as id, 
-                so.event_count as event_count,
+                so.event_started_count as event_started_count,
                 so.event_complete_count as event_complete_count,
                 so.event_failed_count as event_failed_count
         """)
         return {record["id"]: {
-            "event_count": record["event_count"],
+            "event_started_count": record["event_started_count"],
             "event_complete_count": record["event_complete_count"],
             "event_failed_count": record["event_failed_count"]
         } for record in result}
@@ -51,7 +51,7 @@ def update_node_graph(log_directory):
     last_timestamp = _get_last_processed_timestamp(log_directory)
 
     # Get current counts from Neo4j
-    current_counts = _get_current_event_counts()
+    current_counts = _get_current_event_started_counts()
 
     # Read only new events
     events, latest_timestamp = _read_events(
@@ -114,7 +114,7 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
     for so_id in current_counts:
         if so_id is not None:
             events[str(
-                so_id)]['stream_object_event_started_count'] = current_counts[so_id]['event_count']
+                so_id)]['stream_object_event_started_count'] = current_counts[so_id]['event_started_count']
             events[str(
                 so_id)]['stream_object_event_complete_count'] = current_counts[so_id]['event_complete_count']
             events[str(
@@ -169,7 +169,7 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                         latest_timestamp = timestamp
                     
                     if is_started:
-                        # get event_count or set to 0
+                        # get event_started_count or set to 0
                         event_started_count = events[key].get('stream_object_event_started_count', 0)
                         events[key]['stream_object_event_started_count'] = event_started_count + 1
                     
@@ -200,7 +200,7 @@ def _merge_stream_object(tx, event):
     MERGE (so:StreamObject {node_id: $so_id})
     SET so.title = $so_title,
         so.type = $so_type,
-        so.event_count = $so_event_count,
+        so.event_started_count = $so_event_started_count,
         so.event_complete_count = $so_event_complete_count,
         so.event_failed_count = $so_event_failed_count,
         so.log_created = $log_created,
@@ -211,7 +211,7 @@ def _merge_stream_object(tx, event):
         "so_id": event['stream_object_id'],
         "so_title": event['stream_object_name'],
         "so_type": event['stream_object_type'],
-        "so_event_count": event['stream_object_event_started_count'],
+        "so_event_started_count": event['stream_object_event_started_count'],
         "so_event_complete_count": event['stream_object_event_complete_count'],
         "so_event_failed_count": event['stream_object_event_failed_count'],
         "log_created": event['timestamp'],
