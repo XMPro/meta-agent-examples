@@ -142,7 +142,7 @@ def _read_events(log_file_path, last_processed_timestamp, current_counts):
                 so_id = agent.get('Id')
                 
                 # Define event types
-                is_started = log_entry.get('MessageTemplate') == 'Agent process {AgentProcessName} started'
+                is_started = log_entry.get('MessageTemplate') == 'Agent process {AgentProcessName} started' and properties.get('AgentProcessName') == 'Receive'
                 is_completed = log_entry.get('MessageTemplate') == 'Agent process {AgentProcessName} completed time {ElapsedTime} secs'
                 is_error = log_entry.get('MessageTemplate') == 'Agent reported an error'
                 is_stream_object_event = is_started or is_completed or is_error
