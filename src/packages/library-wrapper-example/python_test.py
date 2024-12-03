@@ -1,7 +1,7 @@
 from MetaPythonRunner import DataProcessor
 
 def main():
-    filepath = "../simple-math-example/another_main.py"
+    filepath = "another_main.py"
     processor = DataProcessor(filepath, 60)
 
     create_data = {"foo": "20"}
