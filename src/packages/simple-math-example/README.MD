@@ -11,7 +11,6 @@ Does simple arithmetic calculations from a static value `foo` and a dyanmic `bar
 - Addition
 - Subtraction
 - Multiplication
-The results are then 
 
 ## Usage
 
