@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "xmdim"
+version = "0.0.1"
+authors = [
+  { name="Jaun van Heerden", email="jvh@xmpro.com" }
+]
+dependencies = ["numpy",  "scikit-learn"]
+description = "XMPro Dimensionality is a Python library for Dimensionality reduction."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+
+[project.urls]
+Homepage = "https://github.com/pypa/sampleproject"  # Update to your actual repo URL
+Issues = "https://github.com/pypa/sampleproject/issues"  # Update to your actual issues URL
+
+[tool.hatch.build]
+sources = ["src"]
+
+[tool.hatch.build.targets.wheel]
