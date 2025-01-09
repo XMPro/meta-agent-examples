@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "xmci"
+version = "0.0.35"
+authors = [
+  { name="Jaun van Heerden", email="jvh@xmpro.com" },
+  { name="Zhayne Figueroa", email="zf@xmpro.com" }
+]
+dependencies = ["numpy"]
+description = "XMPro Control Insight is a Python library designed for monitoring and analyzing industrial control loops using various performance metrics. This package provides an easy-to-use framework to measure key performance indicators (KPIs) related to control systems and identify potential issues such as saturation, tuning problems, and disturbances."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/pypa/sampleproject"  # Update to your actual repo URL
+Issues = "https://github.com/pypa/sampleproject/issues"  # Update to your actual issues URL
+
+[tool.hatch.build]
+sources = ["src"]
+
+[tool.hatch.build.targets.wheel]

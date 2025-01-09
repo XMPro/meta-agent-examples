@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "xmof"
+version = "0.0.14"
+authors = [
+  { name="Jaun van Heerden", email="jvh@xmpro.com" }
+]
+description = "A Python library for industrial calculations with support for formula dependencies, caching, and automatic evaluation ordering."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Manufacturing",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Mathematics"
+]
+dependencies = [
+    "networkx",
+    "sympy",
+    "cachetools",
+    "typing-extensions>=4.0.0",
+    "dataclasses; python_version<'3.7'"
+]
+
+[project.urls]
+Documentation = "https://docs.xmpro.com"
+Source = "https://github.com/xmpro/industrial-calculator"
+
+[tool.hatch.build]
+sources = ["src"]
+
+[tool.hatch.build.targets.wheel]
