@@ -1,6 +1,6 @@
-# XMPro Meta Agent Repository
+# XMPro Meta Agent Examples Repository
 
-This repository contains a collection of Meta Agents Source Code and configuration intended for use with the XMPro Meta Agent. Each implementation allows designers to innovate quickly by creating agents in languages they are familiar with while leveraging 3rd party libraries.
+This repository contains a collection of Meta Agent Example Source Code and configuration intended for use with the XMPro Meta Agent. Each implementation allows designers to innovate quickly by creating agents in languages they are familiar with while leveraging 3rd party libraries.
 
 ## Overview
 
@@ -34,7 +34,7 @@ src/
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/organization/xmpro-meta-agents.git
+   git clone https://github.com/XMPro/meta-agent-examples.git
    ```
 2. Navigate to the specific Meta Agent implementation you want to work with:
    ```bash
