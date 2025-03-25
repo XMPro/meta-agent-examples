@@ -1,3 +1,11 @@
+import sys
+import os
+
+# Get the absolute path of the `simple-math-example` package
+current_dir = os.path.dirname(os.path.abspath(__file__))
+package_dir = os.path.abspath(os.path.join(current_dir, ".."))  # Move up to `simple-math-example`
+sys.path.insert(0, package_dir)  # Add `simple-math-example` directly
+
 from calculator.helper import Calculator
 
 class MyClass:
